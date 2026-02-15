@@ -1,0 +1,41 @@
+Testing Sambanova API...
+Key: Present
+Success!
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "Hello. How can I assist you today?",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1771183619,
+  "id": "43acb784-3c6f-474b-b704-9afe804d1906",
+  "model": "Meta-Llama-3.1-8B-Instruct",
+  "object": "chat.completion",
+  "system_fingerprint": "fastcoe",
+  "usage": {
+    "completion_tokens": 9,
+    "completion_tokens_after_first_per_sec": 375.2620560078733,
+    "completion_tokens_after_first_per_sec_first_ten": 396.6713795956969,
+    "completion_tokens_after_first_per_sec_graph": 396.6713795956969,
+    "completion_tokens_per_sec": 151.97181885157795,
+    "end_time": 1771183619.3313136,
+    "is_last_response": true,
+    "prompt_tokens": 42,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "start_time": 1771183619.272092,
+    "stop_reason": "stop",
+    "time_to_first_token": 0.0379030704498291,
+    "time_to_first_token_graph": 0.0363621711730957,
+    "total_latency": 0.059221506118774414,
+    "total_tokens": 51,
+    "total_tokens_per_sec": 861.1736401589417
+  }
+}

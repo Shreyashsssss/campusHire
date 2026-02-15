@@ -1,0 +1,54 @@
+[
+    {
+        "path": "src/",
+        "children": [
+            {
+                "path": "auth",
+                "children": [
+                    "Login.tsx"
+                ]
+            },
+            {
+                "path": "components",
+                "children": [
+                    "DriveCard.tsx",
+                    "Navbar.tsx"
+                ]
+            },
+            {
+                "path": "context",
+                "children": [
+                    "AuthContext.tsx"
+                ]
+            },
+            {
+                "path": "pages",
+                "children": [
+                    "Dashboard.tsx",
+                    "Applications.tsx"
+                ]
+            },
+            {
+                "path": "services",
+                "children": [
+                    "mockData.ts"
+                ]
+            },
+            {
+                "path": "utils",
+                "children": [
+                    "eligibility.ts"
+                ]
+            },
+            {
+                "path": "types",
+                "children": [
+                    "index.ts"
+                ]
+            },
+            "App.tsx",
+            "main.tsx",
+            "index.css"
+        ]
+    }
+]
