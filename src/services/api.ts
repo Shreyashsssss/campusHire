@@ -1,6 +1,7 @@
 import type { User, JobDrive, Application } from '../types';
 
-const API_URL = '/api'; // Proxy handles the rest
+// Use environment variable for API URL, fallback to local proxy for development
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const handleResponse = async (response: Response) => {
     if (!response.ok) {

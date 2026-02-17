@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: tgpcet-backend
+    env: node
+    plan: free
+    branch: main
+    buildCommand: npm install
+    startCommand: node server/server.js
+    envVars:
+      - key: SAMBANOVA_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false

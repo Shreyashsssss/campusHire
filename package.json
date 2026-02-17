@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run start:server\" \"npm run start:client\"",
+    "start": "node server/server.js",
     "start:server": "node server/server.js",
     "start:client": "vite",
     "build": "tsc -b && vite build",
