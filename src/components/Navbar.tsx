@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Briefcase, LayoutDashboard, UserCheck, Bell, LogOut, Menu, X } from 'lucide-react';
+import { Briefcase, LayoutDashboard, UserCheck, Bell, LogOut, Menu, X, FileText } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
     const { user, logout } = useAuth();
@@ -18,6 +18,7 @@ export const Navbar: React.FC = () => {
     const navItems = user.role === 'student' ? [
         { name: 'Drives', to: '/dashboard', icon: LayoutDashboard },
         { name: 'My Applications', to: '/applications', icon: UserCheck },
+        { name: 'ATS Scorer', to: '/ats-scorer', icon: FileText },
     ] : [
         { name: 'Manage Drives', to: '/company', icon: LayoutDashboard },
         { name: 'Candidates', to: '/candidates', icon: UserCheck },

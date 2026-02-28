@@ -5,6 +5,7 @@ import Navbar from './components/Navbar';
 import Login from './auth/Login';
 import Dashboard from './pages/Dashboard';
 import Applications from './pages/Applications';
+import ATSResumeScorer from './components/ATSResumeScorer';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -48,6 +49,14 @@ const MainApp = () => {
           element={
             <PrivateRoute>
               <Applications />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/ats-scorer"
+          element={
+            <PrivateRoute>
+              <ATSResumeScorer />
             </PrivateRoute>
           }
         />

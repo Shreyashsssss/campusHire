@@ -13,9 +13,21 @@
   --color-surface: #f8fafc;
 }
 
+:root {
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --primary-light: #60a5fa;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --border: #e5e7eb;
+  --card-bg: #ffffff;
+  --success: #16a34a;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--color-surface);
+  color: var(--text-primary);
 }
 
 .fade-in {

@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const require = createRequire(import.meta.url);
 const pdfParse = require('pdf-parse');
@@ -140,9 +141,14 @@ app.post('/api/applications', (req, res) => {
 
 
 // --- Gemini AI Integration ---
-// --- Sambanova AI Integration ---
-const SAMBANOVA_API_KEY = process.env.SAMBANOVA_API_KEY || "YOUR_API_KEY";
-const SAMBANOVA_API_URL = "https://api.sambanova.ai/v1/chat/completions";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "YOUR_API_KEY";
+let genAI = null;
+
+try {
+    genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+} catch (err) {
+    console.error('Failed to initialize Gemini AI:', err.message);
+}
 
 // --- AI Analysis Helper ---
 async function analyzeWithAI(content, type = 'profile') {
@@ -172,6 +178,19 @@ async function analyzeWithAI(content, type = 'profile') {
         4. **Detailed Action Plan**: Learning paths & job search strategy.
         5. **Resume Feedback**: Specific formatting/Content improvements.
         `;
+    } else if (type === 'validate-resume') {
+        userPrompt = `
+        Determine if this is a valid resume/CV:
+        "${content.substring(0, 10000)}"
+
+        Return a STRICT JSON object with ONLY these fields (no other text):
+        {
+            "isResume": boolean, // true if this is a valid resume, false otherwise
+            "reason": "string" // Brief explanation if not a resume
+        }
+
+        A valid resume should contain: name, contact info, work experience/education, and skills. If the document does NOT contain these elements, return isResume: false.
+        `;
     } else {
         // Default profile analysis
         userPrompt = `
@@ -194,30 +213,16 @@ async function analyzeWithAI(content, type = 'profile') {
     }
 
     try {
-        const response = await fetch(SAMBANOVA_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${SAMBANOVA_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: "Meta-Llama-3.1-8B-Instruct",
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: userPrompt }
-                ],
-                temperature: 0.2, // Lower temperature for more consistent JSON
-                top_p: 0.95
-            })
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`API request failed with status ${response.status}: ${errorText}`);
+        if (!genAI) {
+            throw new Error('Gemini AI not initialized');
         }
 
-        const result = await response.json();
-        let content = result.choices[0]?.message?.content || "{}";
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
+        
+        const result = await model.generateContent(fullPrompt);
+        const response = await result.response;
+        let content = response.text() || "{}";
 
         // Clean potential markdown fencing often added by LLMs
         content = content.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -295,6 +300,134 @@ app.post('/api/upload/resume', upload.single('resume'), async (req, res) => {
     } catch (error) {
         console.error('Resume Upload Error:', error);
         res.status(500).json({ error: 'Failed to process resume', details: error.message });
+    }
+});
+
+// ATS Resume Scoring Endpoint (validates if it's a resume, then scores it)
+app.post('/api/analyze/resume-ats', upload.single('resume'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const filePath = req.file.path;
+        let resumeText = "";
+
+        // Extract text from PDF
+        if (req.file.mimetype === 'application/pdf') {
+            const dataBuffer = fs.readFileSync(filePath);
+            const data = await pdfParse(dataBuffer);
+            resumeText = data.text;
+        } else {
+            // Fallback for text files
+            resumeText = fs.readFileSync(filePath, 'utf8');
+        }
+
+        if (!resumeText || resumeText.trim().length === 0) {
+            return res.status(400).json({ 
+                error: 'it is not resume try again',
+                isResume: false 
+            });
+        }
+
+        // Simple resume validation using keyword detection
+        console.log("Validating if file is a resume:", req.file.filename);
+        
+        const resumeKeywords = [
+            'experience', 'education', 'skill', 'email', 'phone', 'contact',
+            'work', 'project', 'employment', 'degree', 'certificate',
+            'responsibility', 'objective', 'summary', 'linkedin', 'github'
+        ];
+        
+        const textLower = resumeText.toLowerCase();
+        const keywordMatches = resumeKeywords.filter(keyword => 
+            textLower.includes(keyword)
+        ).length;
+
+        // If less than 3 keyword matches, it's probably not a resume
+        if (keywordMatches < 3) {
+            fs.unlinkSync(filePath);
+            return res.status(400).json({ 
+                error: 'it is not resume try again',
+                isResume: false,
+                reason: 'Resume does not contain typical resume keywords'
+            });
+        }
+
+        // Calculate ATS Score based on content analysis
+        console.log("Resume validated. Calculating ATS score...");
+        
+        let atsScore = 50; // Base score
+        let technicalScore = 50;
+        let communicationScore = 50;
+        let aptitudeScore = 50;
+        
+        // Bonus points for technical keywords
+        const technicalKeywords = ['python', 'java', 'javascript', 'react', 'node', 'sql', 'aws', 'docker', 'kubernetes', 'c++', 'c#', 'typescript', 'api', 'database', 'git'];
+        const techCount = technicalKeywords.filter(tech => textLower.includes(tech)).length;
+        technicalScore = Math.min(100, 50 + (techCount * 5));
+
+        // Bonus points for communication skills
+        const commKeywords = ['leadership', 'management', 'communication', 'presentation', 'team', 'collaboration', 'presentation'];
+        const commCount = commKeywords.filter(comm => textLower.includes(comm)).length;
+        communicationScore = Math.min(100, 50 + (commCount * 5));
+
+        // Bonus points for problem solving
+        const aptitudeKeywords = ['project', 'solution', 'algorithm', 'optimization', 'improvement', 'troubleshooting', 'problem-solving', 'analysis'];
+        const aptCount = aptitudeKeywords.filter(apt => textLower.includes(apt)).length;
+        aptitudeScore = Math.min(100, 50 + (aptCount * 5));
+
+        // Final ATS score is average of all metrics
+        atsScore = Math.round((technicalScore + communicationScore + aptitudeScore) / 3);
+
+        // Bonus/penalty based on resume length
+        if (resumeText.length > 5000) {
+            atsScore = Math.min(100, atsScore + 10);
+        } else if (resumeText.length < 500) {
+            atsScore = Math.max(0, atsScore - 15);
+        }
+
+        // Generate a simple analysis
+        const analysis = `## Resume Analysis
+
+### Strengths Detected:
+- Keywords found: ${keywordMatches} resume-related terms
+- Technical skills mentioned: ${techCount}
+- Communication skills highlighted: ${commCount}
+- Problem-solving indicators: ${aptCount}
+
+### Areas for Improvement:
+${techCount < 5 ? '- Consider adding more technical skills and tools used\n' : ''}${commCount < 3 ? '- Highlight leadership and team collaboration experience\n' : ''}${resumeText.length < 1000 ? '- Expand your resume with more accomplishments and details\n' : ''}
+
+### Recommendations:
+1. Ensure all contact information is clearly visible
+2. Quantify achievements with metrics and numbers
+3. Use action verbs at the beginning of bullet points
+4. Include relevant keywords for your industry
+5. Keep your resume to 1-2 pages for entry-level positions`;
+
+        fs.unlinkSync(filePath);
+
+        res.json({
+            message: 'Resume analyzed successfully',
+            filename: req.file.filename,
+            isResume: true,
+            atsScore: atsScore,
+            analysis: analysis,
+            profileScore: atsScore,
+            performance: {
+                technical: technicalScore,
+                communication: communicationScore,
+                aptitude: aptitudeScore
+            }
+        });
+
+    } catch (error) {
+        console.error('ATS Scoring Error:', error);
+        res.status(500).json({ 
+            error: 'Failed to process resume', 
+            details: error.message 
+        });
     }
 });
 
